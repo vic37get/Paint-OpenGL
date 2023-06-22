@@ -28,16 +28,16 @@ using namespace std;
 #define ESC 27
 
 //Enumeracao com os tipos de formas geometricas
-enum tipo_forma{LIN = 1, TRI, RET, POL, CIR }; // Linha, Triangulo, Retangulo Poligono, Circulo
+enum tipo_forma{LIN = 1, TRI, RET, POL, CIR}; // Linha, Triangulo, Retangulo Poligono, Circulo
 
 //Verifica se foi realizado o primeiro clique do mouse
-bool click1 = false;
+bool click1 = false, click2 = false, click3 = false;
 
 //Coordenadas da posicao atual do mouse
 int m_x, m_y;
 
-//Coordenadas do primeiro clique e do segundo clique do mouse
-int x_1, y_1, x_2, y_2;
+//Coordenadas do primeiro clique, segundo clique e terceiro clique do mouse.
+int x_1, y_1, x_2, y_2, x_3, y_3;
 
 //Indica o tipo de forma geometrica ativa para desenhar
 int modo = LIN;
@@ -84,6 +84,20 @@ void pushLinha(int x1, int y1, int x2, int y2){
     pushVertice(x2, y2);
 }
 
+void pushTriangulo(int x1, int y1, int x2, int y2, int x3, int y3){
+	pushForma(TRI);
+	pushVertice(x1, y1);
+	pushVertice(x2, y2);
+	pushVertice(x3, y3);
+	
+}
+
+void pushQuadrado(int x1, int y1, int x2, int y2){
+	pushForma(RET);
+	pushVertice(x1,y1);
+	pushVertice(x2,y2);
+}
+
 /*
  * Declaracoes antecipadas (forward) das funcoes (assinaturas das funcoes)
  */
@@ -100,6 +114,12 @@ void drawFormas();
 
 // Funcao que implementa o Algoritmo de Bresenham para rasterizacao de segmentos de retas.
 void linha(int x1, int y1, int x2, int y2);
+
+//Funcao que implementa o Triangulo
+void triangulo(int x1, int y1, int x2, int y2, int x3, int y3);
+
+//Funcao que implementa o Quadrado
+void quadrado(int x1, int y1, int x2, int y2);
 
 
 /*
@@ -185,8 +205,31 @@ void menu_popup(int value){
  * Controle das teclas comuns do teclado
  */
 void keyboard(unsigned char key, int x, int y){
+	//Todas as teclas são em minúsculo.
     switch (key) { // key - variavel que possui valor ASCII da tecla precionada
-        case ESC: exit(EXIT_SUCCESS); break;
+    	//Tecla L, desenha Linhas.
+    	case 108:
+    		modo = LIN;
+    		break;
+    	//Tecla T, desenha Triangulos.
+    	case 116:
+        	modo = TRI;
+        	break;
+    	//Tecla Q, desenha Quadrilateros.
+    	case 113:
+        	modo = RET;
+        	break;
+        //Tecla P, desenha Polignos.
+    	case 112:
+        	modo = POL;
+        	break;
+        //Tecla C, desenha Circunferencias.
+    	case 99:
+        	modo = CIR;
+        	break;
+    	
+        case ESC: exit(EXIT_SUCCESS); 
+			break;
     }
 }
 
@@ -196,8 +239,7 @@ void keyboard(unsigned char key, int x, int y){
 void mouse(int button, int state, int x, int y){
     switch (button) {
         case GLUT_LEFT_BUTTON:
-            switch(modo){
-                case LIN:
+                if (modo == LIN){
                     if (state == GLUT_DOWN) {
                         if(click1){
                             x_2 = x;
@@ -213,9 +255,57 @@ void mouse(int button, int state, int x, int y){
                             printf("Clique 1(%d, %d)\n",x_1,y_1);
                         }
                     }
-                break;
+				}
+				else if (modo == RET){
+                    if (state == GLUT_DOWN) {
+                        if(click1){
+                            x_2 = x;
+                            y_2 = height - y - 1;
+                            printf("Clique 2(%d, %d)\n",x_2,y_2);
+                            pushQuadrado(x_1, y_1, x_2, y_2);
+                            click1 = false;
+                            glutPostRedisplay();
+                        }else{
+                            click1 = true;
+                            x_1 = x;
+                            y_1 = height - y - 1;
+                            printf("Clique 1(%d, %d)\n",x_1,y_1);
+                        }
+                    }
+				}
+            	else if(modo == TRI){
+            		if (state == GLUT_DOWN) {
+                        if(click2){
+                            x_3 = x;
+                            y_3 = height - y - 1;
+                            click3 = true;
+                            printf("Clique 3(%d, %d)\n",x_3,y_3);
+                            pushTriangulo(x_1, y_2, x_2, y_2, x_3, y_3);
+                            click2 = false;
+                            glutPostRedisplay();
+                        }else if(click1){
+                            x_2 = x;
+                            y_2 = height - y - 1;
+                            click2 = true;
+                            printf("Clique 2(%d, %d)\n",x_2,y_2);
+                            click1 = false;
+                            glutPostRedisplay();
+                        }
+                        else{
+							click1 = true;
+                            x_1 = x;
+                            y_1 = height - y - 1;
+                            printf("Clique 1(%d, %d)\n",x_1,y_1);
+						}
+                    }
+				}            	
+            	if (modo == POL){
+            		printf("POL!");
+				}
+            	if (modo == CIR){
+            		printf("PEGOU!");
+				}
             }
-        break;
 
 //        case GLUT_MIDDLE_BUTTON:
 //            if (state == GLUT_DOWN) {
@@ -230,7 +320,6 @@ void mouse(int button, int state, int x, int y){
 //        break;
             
     }
-}
 
 /*
  * Controle da posicao do cursor do mouse
@@ -253,24 +342,48 @@ void drawPixel(int x, int y){
  *Funcao que desenha a lista de formas geometricas
  */
 void drawFormas(){
+	int i = 0;
     //Apos o primeiro clique, desenha a reta com a posicao atual do mouse
-    if(click1) linha(x_1, y_1, m_x, m_y);
-    
+
     //Percorre a lista de formas geometricas para desenhar
     for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
         switch (f->tipo) {
             case LIN:
-                int i = 0, x[2], y[2];
+            	i = 0;
+				int x[2];
+				int y[2];
                 //Percorre a lista de vertices da forma linha para desenhar
                 for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
                     x[i] = v->x;
                     y[i] = v->y;
                 }
                 //Desenha o segmento de reta apos dois cliques
+                if (click1 && modo == LIN){
+			  		linha(x_1, y_1, m_x, m_y);
+				}
                 linha(x[0], y[0], x[1], y[1]);
-            break;
-//            case RET:
-//            break;
+                break;
+            
+            case TRI:
+            	i = 0;
+				int xt[3];
+				int yt[3];
+                for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
+                    xt[i] = v->x;
+                    yt[i] = v->y;
+                }
+                triangulo(xt[0], yt[0], xt[1], yt[1], xt[2], yt[2]);
+                break;
+           case RET:
+      			i = 0;
+	   	   	   	int xq[2];
+				int yq[2];
+	            for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
+				        xq[i] = v->x;
+				        yq[i] = v->y;
+ 	 	        }
+	            quadrado(xq[0], yq[0], xq[1], yq[1]);
+	            break;
         }
     }
 }
@@ -280,7 +393,6 @@ void drawFormas(){
 // Função que implementa a linha usando o Algoritmo de Bresenham com redução ao primeiro octante.
 
 void linha(int x1, int y1, int x2, int y2){
-	printf("X1, Y1, X2, Y2: (%d,%d), (%d,%d)", x1,y1,x2,y2);
 	int deltaX, deltaY, d, incE, incNE, xi, yi, aux;
 	int pontoX, pontoY, pontoX1, pontoY1, pontoX2, pontoY2;
 	bool declive, simetrico, superior;
@@ -354,7 +466,24 @@ void linha(int x1, int y1, int x2, int y2){
 			pontoY = -pontoY;
 		}
 		drawPixel(pontoX, pontoY);
-		printf("Pontos: %d %d ", pontoX, pontoY);
 	}
 	drawPixel(pontoX2, pontoY2);
+}
+	
+//----------------------------------------- DESENHO DE TRIÂNGULOS ----------------------------------------------------------//
+
+// Função que implementa os triângulos.
+void triangulo(int x1,int y1, int x2, int y2, int x3, int y3){
+	linha(x1, y1, x2, y2);
+	linha(x2, y2, x3, y3);
+	linha(x1, y1, x3, y3);
+}
+
+
+//----------------------------------------- DESENHO DE QUADRILATEROS ----------------------------------------------------------//
+void quadrado(int x1, int y1, int x2, int y2){
+	linha(x1, y1, x2,y1);
+	linha(x2, y1, x2, y2);
+	linha(x2, y2, x1,y2);
+	linha(x1, y2, x1, y1);
 }

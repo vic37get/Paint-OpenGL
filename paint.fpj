@@ -15,7 +15,7 @@
 		<ProductVersion Value="1.0.0.0"/>
 		<AutoIncrementBuild Value="No"/>
 	</VersionInfo>
-	<Libs Value="-mwindows -static -lglut32 -lglu32 -lopengl32 -lwinmm -lgdi32"/>
+	<Libs Value="-static -lglut32 -lglu32 -lopengl32 -lwinmm -lgdi32"/>
 	<Flags Value="-std=c++0x -DGLUT_STATIC"/>
 	<Target Value="paint.exe"/>
 	<CommandLine Value=""/>
@@ -27,7 +27,7 @@
 	<EnableTheme Value="Yes"/>
 	<RequiresAdmin Value="No"/>
 	<CompilerType Value="CPP"/>
-	<AppType Value="GUI"/>
+	<AppType Value="CONSOLE"/>
 	<Files>
 		<File Name="paint.cpp"/>
 		<File Name="glut_text.h"/>
