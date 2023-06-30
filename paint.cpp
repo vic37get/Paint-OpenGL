@@ -44,13 +44,11 @@ int x_1, y_1, x_2, y_2, x_3, y_3;
 int modo = LIN;
 
 //Largura e altura da janela
-int width = 1024, height = 768;
+int width = 500, height = 500;
 
-typedef struct{
-	float r;
-	float b;
-	float g;
-}cor;
+//Cores para o FloodFIll
+float novaCor[3] = {1.0, 1.0, 0.0};
+float corAntiga[3] = {1.0, 1.0, 1.0};
 
 // Definicao de vertice
 struct vertice{
@@ -95,8 +93,7 @@ void pushTriangulo(int x1, int y1, int x2, int y2, int x3, int y3){
 	pushForma(TRI);
 	pushVertice(x1, y1);
 	pushVertice(x2, y2);
-	pushVertice(x3, y3);
-	
+	pushVertice(x3, y3);	
 }
 
 void pushQuadrilatero(int x1, int y1, int x2, int y2){
@@ -143,43 +140,14 @@ void triangulo(int x1, int y1, int x2, int y2, int x3, int y3);
 void circunferencia(int x1, int x2, int origemX, int origemY, int raio);
 
 //Funcao que implementa a coloração FloodFill
-void floodFill(float x1, float y1, cor corAnterior, cor novaCor);
-void floodFillSR(int x1, int y1, cor corAnterior, cor novaCor);
-
-
-/*
- * Funcao principal
- */
-int main(int argc, char** argv){
-    glutInit(&argc, argv); // Passagens de parametro C para o glut
-    glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB); //Selecao do Modo do Display e do Sistema de cor
-    glutInitWindowSize (width, height);  // Tamanho da janela do OpenGL
-    glutInitWindowPosition (100, 100); //Posicao inicial da janela do OpenGL
-    glutCreateWindow ("Computacao Grafica: Paint com OpenGL"); // Da nome para uma janela OpenGL
-    init(); // Chama funcao init();
-    glutReshapeFunc(reshape); //funcao callback para redesenhar a tela
-    glutKeyboardFunc(keyboard); //funcao callback do teclado
-    glutMouseFunc(mouse); //funcao callback do mouse
-    glutPassiveMotionFunc(mousePassiveMotion); //fucao callback do movimento passivo do mouse
-    glutDisplayFunc(display); //funcao callback de desenho
-    
-    // Define o menu pop-up
-    glutCreateMenu(menu_popup);
-    glutAddMenuEntry("Linha", LIN);
-//    glutAddMenuEntry("Retangulo", RET);
-    glutAddMenuEntry("Sair", 0);
-    glutAttachMenu(GLUT_RIGHT_BUTTON);
-
-    
-    glutMainLoop(); // executa o loop do OpenGL
-    return EXIT_SUCCESS; // retorna 0 para o tipo inteiro da funcao main();
-}
+void floodFill(int x, int y, float oldColor[3], float fillColor[3]);
+void coloreFlood(int x, int y, float fillColor[3]);
 
 /*
  * Inicializa alguns parametros do GLUT
  */
 void init(void){
-    glClearColor(1.0, 1.0, 1.0, 1.0); //Limpa a tela com a cor branca;
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f); //Limpa a tela com a cor branca;
 }
 
 /*
@@ -214,7 +182,6 @@ void display(void){
     //Desenha texto com as coordenadas da posicao do mouse
     draw_text_stroke(0, 0, "(" + to_string(m_x) + "," + to_string(m_y) + ")", 0.2);
     glutSwapBuffers(); // manda o OpenGl renderizar as primitivas
-
 }
 
 /*
@@ -272,7 +239,6 @@ void mouse(int button, int state, int x, int y){
                         if(click1){
                             x_2 = x;
                             y_2 = height - y - 1;
-                            printf("Clique 2(%d, %d)\n",x_2,y_2);
                             pushLinha(x_1, y_1, x_2, y_2);
                             click1 = false;
                             glutPostRedisplay();
@@ -280,7 +246,6 @@ void mouse(int button, int state, int x, int y){
                             click1 = true;
                             x_1 = x;
                             y_1 = height - y - 1;
-                            printf("Clique 1(%d, %d)\n",x_1,y_1);
                         }
                     }
 				}
@@ -289,7 +254,6 @@ void mouse(int button, int state, int x, int y){
                         if(click1){
                             x_2 = x;
                             y_2 = height - y - 1;
-                            printf("Clique 2(%d, %d)\n",x_2,y_2);
                             pushQuadrilatero(x_1, y_1, x_2, y_2);
                             click1 = false;
                             glutPostRedisplay();
@@ -297,7 +261,6 @@ void mouse(int button, int state, int x, int y){
                             click1 = true;
                             x_1 = x;
                             y_1 = height - y - 1;
-                            printf("Clique 1(%d, %d)\n",x_1,y_1);
                         }
                     }
 				}
@@ -307,7 +270,6 @@ void mouse(int button, int state, int x, int y){
                             x_3 = x;
                             y_3 = height - y - 1;
                             click3 = true;
-                            printf("Clique 3(%d, %d)\n",x_3,y_3);
                             pushTriangulo(x_1, y_1, x_2, y_2, x_3, y_3);
                             click2 = false;
                             glutPostRedisplay();
@@ -315,7 +277,6 @@ void mouse(int button, int state, int x, int y){
                             x_2 = x;
                             y_2 = height - y - 1;
                             click2 = true;
-                            printf("Clique 2(%d, %d)\n",x_2,y_2);
                             click1 = false;
                             glutPostRedisplay();
                         }
@@ -323,19 +284,16 @@ void mouse(int button, int state, int x, int y){
 							click1 = true;
                             x_1 = x;
                             y_1 = height - y - 1;
-                            printf("Clique 1(%d, %d)\n",x_1,y_1);
 						}
                     }
 				}            	
             	else if (modo == POL){
-            		printf("POL!");
 				}
             	else if (modo == CIR){
             		if (state == GLUT_DOWN) {
                         if(click1){
                             x_2 = x;
                             y_2 = height - y - 1;
-                            printf("Clique 2(%d, %d)\n",x_2,y_2);
                             pushCircunferencia(x_1, y_1, x_2, y_2, x_1, y_1);
                             click1 = false;
                             glutPostRedisplay();
@@ -343,19 +301,24 @@ void mouse(int button, int state, int x, int y){
                             click1 = true;
                             x_1 = x;
                             y_1 = height - y - 1;
-                            printf("Clique 1(%d, %d)\n",x_1,y_1);
                         }
                     }
 				}
 				else if (modo == FLOOD){
-            		if (state == GLUT_DOWN) {
-            			click1 = true;
+					if (state == GLUT_DOWN){
+					    x_1 = x;
+                        y_1 = height - y - 1;
+                        floodFill(x_1, y_1, corAntiga, novaCor);
+                        glutPostRedisplay();
+					}
+				}
+				else if(modo == POL){
+					//implementar o POLIGONO.
+					if (state == GLUT_DOWN){
 						x_1 = x;
-                 	    y_1 = height - y - 1;
-				        printf("Clique 1(%d, %d)\n",x_1,y_1);
-						pushFloodFill(x_1, y_1);
-			            glutPostRedisplay();
-                    }
+						y_1 = height - y - 1;
+						
+					}	
 				}
 	}
 }
@@ -373,7 +336,7 @@ void mousePassiveMotion(int x, int y){
  */
 void drawPixel(int x, int y){
     glBegin(GL_POINTS); // Seleciona a primitiva GL_POINTS para desenhar
-    	glColor3f(0.0f, 0.0f, 0.0f);
+    	glColor3f(0.0, 0.0, 0.0);
         glVertex2i(x, y);
     glEnd();  // indica o fim do ponto
 }
@@ -444,21 +407,34 @@ void drawFormas(){
                 origemY = (yc[1] + yc[0])/2;
                 circunferencia(xc[0], yc[0], origemX, origemY, raio);
                 break;
-            
-            case FLOOD:
-            	i = 0;
-				int xf[2];
-				int yf[2];
-				
-                for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
-                    xf[i] = v->x;
-                    yf[i] = v->y;
-                }
-                cor corAnterior = {1.0f, 1.0f, 1.0f};
-                cor novaCor = {1.0f, 0.0f, 0.0f};
-                floodFillSR(xf[0], yf[0], corAnterior, novaCor);
-                break;
-           	 			            
+			 case FLOOD:
+			 	i = 0;
+				int xf;
+				int yf;
+				glBegin(GL_POINTS);
+					glColor3f(novaCor[0], novaCor[1], novaCor[2]);
+	                for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
+	                    xf = v->x;
+	                    yf = v->y;
+						glVertex2i(xf, yf);
+	                }
+ 				glEnd();
+				glFlush();		
+				break;
+			
+			case POL:
+			 	i = 0;
+				int xp;
+				int yp;
+				glBegin(GL_POINTS);
+	                for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
+	                    xp = v->x;
+	                    yp = v->y;
+						glVertex2i(xf, yf);
+	                }
+ 				glEnd();
+				glFlush();		
+				break;        	 			            
         }
     }
 }
@@ -604,39 +580,51 @@ void circunferencia(int x1, int y1, int origemX, int origemY, int raio){
 }
 
 //----------------------------------------- FLOOD FILL ----------------------------------------------------------//
-void floodFill(float x1, float y1, cor corAnterior, cor novaCor){
-	cor corPixel;
-	glReadPixels(x1, y1, 1, 1, GL_RGB, GL_FLOAT, &corPixel);
-	// printf("Cor anterior: (%f, %f, %f)\n", corAnterior.r, corAnterior.g, corAnterior.b);
-	// printf("Nova cor: (%f, %f, %f)\n", novaCor.r, novaCor.g, novaCor.b);
-	// printf("Cor lida: (%f, %f, %f)\n", corPixel.r, corPixel.g, corPixel.b);
-	if (corPixel.r == corAnterior.r && corPixel.g == corAnterior.g && corPixel.b == corAnterior.b){
-		glBegin(GL_POINTS);
-			glColor3f(novaCor.r, novaCor.g, novaCor.b);
-			glVertex2i(x1, y1);
-		glEnd();
-		glFlush();	
-		floodFill(x1+1, y1, corAnterior, novaCor);
-		floodFill(x1, y1+1, corAnterior, novaCor);
-		floodFill(x1-1, y1, corAnterior, novaCor);
-		floodFill(x1, y1-1, corAnterior, novaCor);
-	}
-	
+
+void floodFill(int x, int y, float oldColor[3], float fillColor[3]) {
+    float pixelColor[3];
+    glReadPixels(x, y, 1, 1, GL_RGB, GL_FLOAT, pixelColor);
+
+    if (pixelColor[0] == fillColor[0] && pixelColor[1] == fillColor[1] && pixelColor[2] == fillColor[2]) {
+		return;
+    }
+    
+    if (pixelColor[0] == 0.0 && pixelColor[1] == 0.0 && pixelColor[2] == 0.0) {
+		return;
+    }
+
+    if (pixelColor[0] == oldColor[0] && pixelColor[1] == oldColor[1] && pixelColor[2] == oldColor[2]) {
+        glBegin(GL_POINTS);
+			glColor3f(novaCor[0], novaCor[1], novaCor[2]);
+        	pushFloodFill(x, y);
+        	glVertex2i(x, y);
+        glEnd();
+        glFlush();
+
+        floodFill(x + 1, y, corAntiga, novaCor);
+        floodFill(x - 1, y, oldColor, fillColor);
+        floodFill(x, y + 1, oldColor, fillColor);
+        floodFill(x, y - 1, oldColor, fillColor);
+    }
 }
 
-void floodFillSR(int x1, int y1, cor corAnterior, cor novaCor){
-	cor corPixel;
-	bool naoColorido = true;
-	while (naoColorido == true){
-		glReadPixels(x1, y1, 1, 1, GL_RGB, GL_FLOAT, &corPixel);
-		if(corPixel.r == 0.0f && corPixel.g == 0.0f && corPixel.b == 0.0f){
-			printf("Chegou ao pixel preto");
-			break;
-		}
-		x1++;
-			// printf("Cor lida: (%f, %f, %f)\n", corPixel.r, corPixel.g, corPixel.b);
-			// printf("Cor anterior: (%f, %f, %f)\n", corAnterior.r, corAnterior.g, corAnterior.b);
-			// printf("Nova cor: (%f, %f, %f)\n", novaCor.r, novaCor.g, novaCor.b);	
-	}
-	
+/*
+ * Funcao principal
+ */
+int main(int argc, char** argv){
+    glutInit(&argc, argv); // Passagens de parametro C para o glut
+    glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB); //Selecao do Modo do Display e do Sistema de cor
+    glutInitWindowSize (width, height);  // Tamanho da janela do OpenGL
+    glutInitWindowPosition (100, 100); //Posicao inicial da janela do OpenGL
+    glutCreateWindow ("Computacao Grafica: Paint com OpenGL"); // Da nome para uma janela OpenGL
+    init(); // Chama funcao init();
+    glutReshapeFunc(reshape); //funcao callback para redesenhar a tela
+    glutKeyboardFunc(keyboard); //funcao callback do teclado
+    glutMouseFunc(mouse); //funcao callback do mouse
+    glutPassiveMotionFunc(mousePassiveMotion); //fucao callback do movimento passivo do mouse
+    glutDisplayFunc(display); //funcao callback de desenho
+
+    
+    glutMainLoop(); // executa o loop do OpenGL
+    return EXIT_SUCCESS; // retorna 0 para o tipo inteiro da funcao main();
 }
