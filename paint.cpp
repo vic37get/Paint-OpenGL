@@ -26,6 +26,15 @@ using namespace std;
 
 // Variaveis Globais
 #define ESC 27
+//DESENHO DO POLIGONO--
+
+bool desenha_poligono = false;
+bool* clickPoli=NULL;
+int desenhado=0;
+int *xPoli;
+int *yPoli;
+int lados_poligono = 0;
+//-------------------
 
 int raio;
 //Enumeracao com os tipos de formas geometricas
@@ -113,6 +122,12 @@ void pushFloodFill(int x1, int y1){
 	pushVertice(x1,y1);
 }
 
+void pushPoligno(int x1, int y1, int x2, int y2){
+	pushForma(POL);
+	pushVertice(x1, y1);
+	pushVertice(x2, y2);
+}
+
 /*
  * Declaracoes antecipadas (forward) das funcoes (assinaturas das funcoes)
  */
@@ -142,6 +157,7 @@ void circunferencia(int x1, int x2, int origemX, int origemY, int raio);
 //Funcao que implementa a coloração FloodFill
 void floodFill(int x, int y, float oldColor[3], float fillColor[3]);
 void coloreFlood(int x, int y, float fillColor[3]);
+void poligono(int* x, int* y);
 
 /*
  * Inicializa alguns parametros do GLUT
@@ -197,31 +213,51 @@ void menu_popup(int value){
  * Controle das teclas comuns do teclado
  */
 void keyboard(unsigned char key, int x, int y){
-	//Todas as teclas são em minúsculo.
     switch (key) { // key - variavel que possui valor ASCII da tecla precionada
     	//Tecla L, desenha Linhas.
-    	case 108:
+    	case 'l':
+    		modo = LIN;
+    		break;
+    	case 'L':
     		modo = LIN;
     		break;
     	//Tecla T, desenha Triangulos.
-    	case 116:
+    	case 't':
+        	modo = TRI;
+        	break;
+        case 'T':
         	modo = TRI;
         	break;
     	//Tecla Q, desenha Quadrilateros.
-    	case 113:
+    	case 'q':
+        	modo = RET;
+        	break;
+        case 'Q':
         	modo = RET;
         	break;
         //Tecla P, desenha Polignos.
-    	case 112:
+    	case 'p':
+        	modo = POL;
+        	break;
+        case 'P':
         	modo = POL;
         	break;
         //Tecla C, desenha Circunferencias.
-    	case 99:
+    	case 'c':
+        	modo = CIR;
+        	break;
+        case 'C':
         	modo = CIR;
         	break;
         //Tecla F, para o FloodFill.
-        case 102:
+        case 'f':
         	modo = FLOOD;
+        	break;
+        case 'F':
+        	modo = FLOOD;
+        	break;
+        case '0':
+        	//limparTela();
         	break;
         case ESC: exit(EXIT_SUCCESS); 
 			break;
@@ -287,8 +323,6 @@ void mouse(int button, int state, int x, int y){
 						}
                     }
 				}            	
-            	else if (modo == POL){
-				}
             	else if (modo == CIR){
             		if (state == GLUT_DOWN) {
                         if(click1){
@@ -315,11 +349,25 @@ void mouse(int button, int state, int x, int y){
 				else if(modo == POL){
 					//implementar o POLIGONO.
 					if (state == GLUT_DOWN){
-						x_1 = x;
-						y_1 = height - y - 1;
-						
-					}	
+ 	 	 	 	          x_1 = x;
+                          y_1 = height - y - 1;
+	                  		xPoli = (int*)realloc(xPoli, (lados_poligono + 1) * sizeof(int));
+	                  		yPoli = (int*)realloc(yPoli, (lados_poligono + 1) * sizeof(int));
+	                  		xPoli[lados_poligono] = x_1;
+	                  		yPoli[lados_poligono] = y_1;
+	                  		lados_poligono++;
+                        }
+
+					}
+			break;
+		case GLUT_RIGHT_BUTTON:
+			if (modo == POL){
+				if (state == GLUT_DOWN){
+					desenha_poligono = true;
+					poligono(xPoli, yPoli);
 				}
+			}
+			break;
 	}
 }
 
@@ -346,11 +394,19 @@ void drawPixel(int x, int y){
  */
 void drawFormas(){
 	int i = 0;
+	int controlPoligono = 0;
     //Apos o primeiro clique, desenha a reta com a posicao atual do mouse
 	//Desenha o segmento de reta apos dois cliques
 	if (click1 && (modo == LIN || modo == RET) ){
 	   	linha(x_1, y_1, m_x, m_y);
 	}
+	// if (modo == POL){
+	// 	if (desenha_poligono == true){
+	// 		poligono(xp, yp);
+			//desenha_poligono = false;
+			//lados_poligono = 0;
+	// 	}
+	// }
     //Percorre a lista de formas geometricas para desenhar
     for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
         switch (f->tipo) {
@@ -423,20 +479,34 @@ void drawFormas(){
 				break;
 			
 			case POL:
-			 	i = 0;
-				int xp;
-				int yp;
-				glBegin(GL_POINTS);
+				 	i = 0;
+				 	int xp[2];
+					int yp[2];
 	                for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
-	                    xp = v->x;
-	                    yp = v->y;
-						glVertex2i(xf, yf);
+	                    xp[i] = v->x;
+	                    yp[i] = v->y;
+	                    
 	                }
- 				glEnd();
-				glFlush();		
-				break;        	 			            
-        }
-    }
+					linha(xp[0], yp[0], xp[1], yp[1]);
+					controlPoligono++;
+					if ((controlPoligono == lados_poligono) && (desenha_poligono==true)){
+						lados_poligono = 0;
+						controlPoligono = 0;
+						desenha_poligono = false;
+					}
+				break;
+			
+    	}
+	}
+
+}
+
+//POLIGONO
+void poligono(int* x, int* y){
+	for(int i=0; i<lados_poligono; i++){
+		pushPoligno(x[i], y[i], x[(i+1)%lados_poligono], y[(i+1)%lados_poligono]);
+		//linha(x[i], y[i], x[(i+1)%lados_poligono], y[(i+1)%lados_poligono]);
+	}
 }
 
 //----------------------------------------- DESENHO DE LINHAS ----------------------------------------------------------//
