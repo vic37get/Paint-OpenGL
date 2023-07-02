@@ -91,6 +91,13 @@ void pushVertice(int x, int y){
     formas.front().v.push_front(v);
 }
 
+void limpaTela(){
+	while(!formas.empty()){
+		formas.pop_front();	
+	}
+	glutPostRedisplay();
+}
+
 //Fucao para armazenar uma Linha na lista de formas geometricas
 void pushLinha(int x1, int y1, int x2, int y2){
     pushForma(LIN);
@@ -256,8 +263,9 @@ void keyboard(unsigned char key, int x, int y){
         case 'F':
         	modo = FLOOD;
         	break;
+        // Tecla 0, para limpar a tela.
         case '0':
-        	//limparTela();
+        	limpaTela();
         	break;
         case ESC: exit(EXIT_SUCCESS); 
 			break;
