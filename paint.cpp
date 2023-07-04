@@ -26,19 +26,18 @@ using namespace std;
 
 // Variaveis Globais
 #define ESC 27
-//DESENHO DO POLIGONO--
-
+//DESENHO DO POLIGONO
 bool desenha_poligono = false;
-bool* clickPoli=NULL;
-int desenhado=0;
 int *xPoli;
 int *yPoli;
 int lados_poligono = 0;
-//-------------------
+
+//Operacoes Geometricas
+int ultima_operacao = 0;
 
 int raio;
 //Enumeracao com os tipos de formas geometricas
-enum tipo_forma{LIN = 1, TRI, RET, POL, CIR, FLOOD}; // Linha, Triangulo, Retangulo Poligono, Circulo
+enum tipo_forma{LIN = 1, TRI, RET, POL, CIR, FLOOD, TRANS}; // Linha, Triangulo, Retangulo Poligono, Circulo
 
 //Verifica se foi realizado o primeiro clique do mouse
 bool click1 = false, click2 = false, click3 = false;
@@ -165,6 +164,7 @@ void circunferencia(int x1, int x2, int origemX, int origemY, int raio);
 void floodFill(int x, int y, float oldColor[3], float fillColor[3]);
 void coloreFlood(int x, int y, float fillColor[3]);
 void poligono(int* x, int* y);
+void translacao();
 
 /*
  * Inicializa alguns parametros do GLUT
@@ -266,6 +266,10 @@ void keyboard(unsigned char key, int x, int y){
         // Tecla 0, para limpar a tela.
         case '0':
         	limpaTela();
+        	break;
+        case '1':
+        	translacao();
+        	glutPostRedisplay();
         	break;
         case ESC: exit(EXIT_SUCCESS); 
 			break;
@@ -395,6 +399,26 @@ void drawPixel(int x, int y){
     	glColor3f(0.0, 0.0, 0.0);
         glVertex2i(x, y);
     glEnd();  // indica o fim do ponto
+}
+
+void translacao(){
+	int i = 0;
+	int count =0;
+    for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
+        switch (f->tipo) {
+        	//Feita pegando dois pontos, após o segundo clique é desenhada a linha.
+            case LIN:
+            	i = 0;
+   	         count++;
+    	        printf("count: %d\n", count);
+                //Percorre a lista de vertices da forma linha para desenhar
+                for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
+                    v->x = v->x + 1;
+                    v->y = v->y + 1;
+				}
+    	}
+	}
+
 }
 
 /*
