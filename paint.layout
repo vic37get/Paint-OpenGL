@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Layout>
 	<Files>
-		<File Name="paint.cpp" Top="Yes" Tabpos="1" TopLine="480">
-			<Cursor Line="486" Column="1"/>
+		<File Name="paint.cpp" Top="Yes" Tabpos="1" TopLine="398">
+			<Cursor Line="411" Column="20"/>
 		</File>
 	</Files>
 </Layout>

@@ -401,25 +401,21 @@ void drawPixel(int x, int y){
     glEnd();  // indica o fim do ponto
 }
 
-void translacao(){
-	int i = 0;
-	int count =0;
-    for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
-        switch (f->tipo) {
-        	//Feita pegando dois pontos, após o segundo clique é desenhada a linha.
-            case LIN:
-            	i = 0;
-   	         count++;
-    	        printf("count: %d\n", count);
-                //Percorre a lista de vertices da forma linha para desenhar
-                for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
-                    v->x = v->x + 1;
-                    v->y = v->y + 1;
-				}
-    	}
-	}
+void translacao() {
+    int i = 0;
+    int count = 0;
+    forward_list<forma>::iterator primeiraForma = formas.begin();
 
+    if (primeiraForma != formas.end()) {
+        for (forward_list<vertice>::iterator v = primeiraForma->v.begin(); v != primeiraForma->v.end(); ++v, ++i) {
+            v->x = v->x + 1;
+            v->y = v->y + 1;
+        }
+    }
 }
+
+
+
 
 /*
  *Funcao que desenha a lista de formas geometricas
