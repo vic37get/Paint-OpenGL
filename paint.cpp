@@ -267,10 +267,6 @@ void keyboard(unsigned char key, int x, int y){
         case '0':
         	limpaTela();
         	break;
-        case '1':
-        	translacao();
-        	glutPostRedisplay();
-        	break;
         case ESC: exit(EXIT_SUCCESS); 
 			break;
     }
@@ -401,21 +397,109 @@ void drawPixel(int x, int y){
     glEnd();  // indica o fim do ponto
 }
 
-void translacao() {
-    int i = 0;
-    int count = 0;
-    forward_list<forma>::iterator primeiraForma = formas.begin();
-
-    if (primeiraForma != formas.end()) {
-        for (forward_list<vertice>::iterator v = primeiraForma->v.begin(); v != primeiraForma->v.end(); ++v, ++i) {
-            v->x = v->x + 1;
-            v->y = v->y + 1;
-        }
-    }
+void transfGeometricas(int key, int x, int y){
+		int i = 0;
+		int y_aux;
+		int x_aux;
+		forward_list<forma>::iterator primeiraForma = formas.begin();
+		vertice primeiroVertice = *(primeiraForma->v.begin());
+		int med_x = 0, med_y = 0, sum_x = 0, sum_y = 0;
+		int count = 0;
+		for (forward_list<vertice>::iterator v = primeiraForma->v.begin(); v != primeiraForma->v.end(); ++v, ++i) {
+			count++;
+			sum_x = sum_x + v->x;
+			sum_y = sum_y + v->y;
+		}
+		med_x = sum_x/count;
+		med_y = sum_y/count;
+		
+		if (primeiraForma != formas.end()) {
+    		for (forward_list<vertice>::iterator v = primeiraForma->v.begin(); v != primeiraForma->v.end(); ++v, ++i) {
+    			switch (key) {
+    				//----------Translação----------//
+    				//Para cima:
+    				case GLUT_KEY_UP:
+            			v->y = v->y + 1;
+            			glutPostRedisplay();
+            			break;
+            		//Para baixo:
+            		case GLUT_KEY_DOWN:
+            			v->y = v->y - 1;
+            			glutPostRedisplay();
+            			break;
+            		//Para a esquerda:
+            		case GLUT_KEY_LEFT:
+            			v->x = v->x - 1;
+            			glutPostRedisplay();
+            			break;
+            		//Para a direita:
+            		case GLUT_KEY_RIGHT:
+            			v->x = v->x + 1;
+            			glutPostRedisplay();
+            			break;
+            		//----------Escala----------//
+            		//No eixo X:
+            		case GLUT_KEY_F1:
+            			v->x = v->x - med_x;
+            			v->x = v->x * 1.1;
+            			v->x = v->x + med_x;
+            			glutPostRedisplay();
+            			break;
+            		//No eixo Y:
+            		case GLUT_KEY_F2:
+            			v->y = v->y - med_y;
+            			v->y = v->y * 1.1;
+            			v->y = v->y + med_y;
+            			glutPostRedisplay();
+            			break;
+            		//----------Cisalhamento----------//
+            		//No eixo X:
+            		case GLUT_KEY_F3:
+            			v->y = v->y - med_y;
+            			y_aux = v->y;
+            			v->x = v->x + (1.05*y_aux);
+            			v->y = v->y + med_y;
+            			glutPostRedisplay();
+            			break;
+            		//No eixo Y:
+            		case GLUT_KEY_F4:
+            			v->x = v->x - med_x;
+            			x_aux = v->x;
+            			v->y = v-> y + (1.05*x_aux);
+            			v->x = v->x + med_x;
+            			glutPostRedisplay();
+            			break;
+            		//----------Reflexão----------//
+            		//No eixo X:
+            		case GLUT_KEY_F5:
+            			v->y = v->y - med_y;
+            			v->y = v->y * -1;
+            			v->y = v->y + med_y;
+            			glutPostRedisplay();
+            			break;
+            		//No eixo Y:
+            		case GLUT_KEY_F6:
+            			v->x = v->x - med_x;
+            			v->x = v->x * -1;
+            			v->x = v->x + med_x;
+            			glutPostRedisplay();
+            			break;
+            		//----------Rotacao----------//
+            		case GLUT_KEY_F7:
+            			v->x = v->x - med_x;
+            			x_aux = v->x;
+            			v->y = v->y - med_y;
+            			v->x = (v->x*0.7) - (v->y*0.7);
+            			v->y = (x_aux*0.7) + (v->y*0.7);
+            			v->y = v->y + med_y;
+            			v->x = v->x + med_x;
+            			glutPostRedisplay();
+            			break;		
+				}
+			}
+        }	
+        
 }
-
-
-
 
 /*
  *Funcao que desenha a lista de formas geometricas
@@ -428,13 +512,6 @@ void drawFormas(){
 	if (click1 && (modo == LIN || modo == RET) ){
 	   	linha(x_1, y_1, m_x, m_y);
 	}
-	// if (modo == POL){
-	// 	if (desenha_poligono == true){
-	// 		poligono(xp, yp);
-			//desenha_poligono = false;
-			//lados_poligono = 0;
-	// 	}
-	// }
     //Percorre a lista de formas geometricas para desenhar
     for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
         switch (f->tipo) {
@@ -522,8 +599,7 @@ void drawFormas(){
 						controlPoligono = 0;
 						desenha_poligono = false;
 					}
-				break;
-			
+				break;	
     	}
 	}
 
@@ -533,14 +609,12 @@ void drawFormas(){
 void poligono(int* x, int* y){
 	for(int i=0; i<lados_poligono; i++){
 		pushPoligno(x[i], y[i], x[(i+1)%lados_poligono], y[(i+1)%lados_poligono]);
-		//linha(x[i], y[i], x[(i+1)%lados_poligono], y[(i+1)%lados_poligono]);
 	}
 }
 
 //----------------------------------------- DESENHO DE LINHAS ----------------------------------------------------------//
 
 // Função que implementa a linha usando o Algoritmo de Bresenham com redução ao primeiro octante.
-
 void linha(int x1, int y1, int x2, int y2){
 	int deltaX, deltaY, d, incE, incNE, xi, yi, aux;
 	int pontoX, pontoY, pontoX1, pontoY1, pontoX2, pontoY2;
@@ -718,6 +792,7 @@ int main(int argc, char** argv){
     init(); // Chama funcao init();
     glutReshapeFunc(reshape); //funcao callback para redesenhar a tela
     glutKeyboardFunc(keyboard); //funcao callback do teclado
+    glutSpecialFunc(transfGeometricas);
     glutMouseFunc(mouse); //funcao callback do mouse
     glutPassiveMotionFunc(mousePassiveMotion); //fucao callback do movimento passivo do mouse
     glutDisplayFunc(display); //funcao callback de desenho
