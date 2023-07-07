@@ -58,6 +58,24 @@ int width = 500, height = 500;
 float novaCor[3] = {1.0, 1.0, 0.0};
 float corAntiga[3] = {1.0, 1.0, 1.0};
 
+struct ponto {
+    int x1;
+    int y1;
+    int x2;
+    int y2;
+};
+
+forward_list<ponto> pontos;
+
+void pushPonto(int x1, int y1, int x2, int y2) {
+    ponto ponto;
+    ponto.x1 = x1;
+    ponto.y1 = y1;
+    ponto.x2 = x2;
+    ponto.y2 = y2;
+    pontos.push_front(ponto);
+}
+
 // Definicao de vertice
 struct vertice{
     int x;
@@ -80,6 +98,7 @@ void pushForma(int tipo){
     f.tipo = tipo;
     formas.push_front(f);
 }
+
 
 // Funcao para armazenar um vertice na forma do inicio da lista de formas geometricas
 // Armazena sempre no inicio da lista
@@ -128,11 +147,11 @@ void pushFloodFill(int x1, int y1){
 	pushVertice(x1,y1);
 }
 
-void pushPoligno(int x1, int y1, int x2, int y2){
-	pushForma(POL);
-	pushVertice(x1, y1);
-	pushVertice(x2, y2);
-}
+// void pushPoligno(int x1, int y1, int x2, int y2){
+// 	pushForma(POL);
+// 	pushVertice(x1, y1);
+// 	pushVertice(x2, y2);
+// }
 
 /*
  * Declaracoes antecipadas (forward) das funcoes (assinaturas das funcoes)
@@ -373,6 +392,7 @@ void mouse(int button, int state, int x, int y){
 				if (state == GLUT_DOWN){
 					desenha_poligono = true;
 					poligono(xPoli, yPoli);
+					glutPostRedisplay();
 				}
 			}
 			break;
@@ -584,31 +604,39 @@ void drawFormas(){
 				break;
 			
 			case POL:
-				 	i = 0;
-				 	int xp[2];
-					int yp[2];
-	                for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
-	                    xp[i] = v->x;
-	                    yp[i] = v->y;
-	                    
-	                }
-					linha(xp[0], yp[0], xp[1], yp[1]);
-					controlPoligono++;
-					if ((controlPoligono == lados_poligono) && (desenha_poligono==true)){
-						lados_poligono = 0;
-						controlPoligono = 0;
-						desenha_poligono = false;
-					}
-				break;	
+			 	i = 0;
+			 	int xp[2];
+				int yp[2];
+                for (std::forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++) {
+				    xp[i%2] = v->x;
+				    yp[i%2] = v->y;
+				
+				    std::forward_list<vertice>::iterator proximo = std::next(v);
+				    if (proximo != f->v.end()) {
+				        xp[(i + 1)%2] = proximo->x;
+				        yp[(i + 1)%2] = proximo->y;
+				        linha(xp[i%2], yp[i%2], xp[(i + 1)%2], yp[(i + 1)%2]);
+				    }
+				}
+				
+				if (controlPoligono == lados_poligono && desenha_poligono) {
+				    lados_poligono = 0;
+				    controlPoligono = 0;
+				    desenha_poligono = false;
+				}
+			break;	
     	}
 	}
 
 }
 
-//POLIGONO
+//----------------------------------------- DESENHO DE POLIGONOS ----------------------------------------------------------//
 void poligono(int* x, int* y){
+	pushForma(POL);
 	for(int i=0; i<lados_poligono; i++){
-		pushPoligno(x[i], y[i], x[(i+1)%lados_poligono], y[(i+1)%lados_poligono]);
+		pushVertice(x[i], y[i]);
+		pushVertice(x[(i+1)%lados_poligono], y[(i+1)%lados_poligono]);
+		//pushPoligno(x[i], y[i], x[(i+1)%lados_poligono], y[(i+1)%lados_poligono]);
 	}
 }
 
