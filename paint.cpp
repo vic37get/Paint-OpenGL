@@ -26,6 +26,7 @@ using namespace std;
 
 // Variaveis Globais
 #define ESC 27
+#define maxVer 10000
 //DESENHO DO POLIGONO
 bool desenha_poligono = false;
 int *xPoli;
@@ -37,7 +38,7 @@ int ultima_operacao = 0;
 
 int raio;
 //Enumeracao com os tipos de formas geometricas
-enum tipo_forma{LIN = 1, TRI, RET, POL, CIR, FLOOD, TRANS}; // Linha, Triangulo, Retangulo Poligono, Circulo
+enum tipo_forma{LIN = 1, TRI, RET, POL, CIR, FLOOD, TRANS, PREEN}; // Linha, Triangulo, Retangulo Poligono, Circulo
 
 //Verifica se foi realizado o primeiro clique do mouse
 bool click1 = false, click2 = false, click3 = false;
@@ -51,12 +52,26 @@ int x_1, y_1, x_2, y_2, x_3, y_3;
 //Indica o tipo de forma geometrica ativa para desenhar
 int modo = LIN;
 
+
 //Largura e altura da janela
 int width = 500, height = 500;
 
 //Cores para o FloodFIll
 float novaCor[3] = {1.0, 1.0, 0.0};
 float corAntiga[3] = {1.0, 1.0, 1.0};
+
+typedef struct{
+	int ymax; //y máximo da aresta
+	float xdeymin; //x do y mínimo da aresta
+	float m;
+}Arestas;
+
+typedef struct{
+	int quantArestas; //quantidade de arestas
+	Arestas arestas[maxVer];
+}tabela;
+
+tabela TA[512], TAA;
 
 struct ponto {
     int x1;
@@ -147,12 +162,6 @@ void pushFloodFill(int x1, int y1){
 	pushVertice(x1,y1);
 }
 
-// void pushPoligno(int x1, int y1, int x2, int y2){
-// 	pushForma(POL);
-// 	pushVertice(x1, y1);
-// 	pushVertice(x2, y2);
-// }
-
 /*
  * Declaracoes antecipadas (forward) das funcoes (assinaturas das funcoes)
  */
@@ -184,6 +193,9 @@ void floodFill(int x, int y, float oldColor[3], float fillColor[3]);
 void coloreFlood(int x, int y, float fillColor[3]);
 void poligono(int* x, int* y);
 void translacao();
+void initTabela();
+void preenchimentoPoligono();
+void addTabela (int x1,int y1, int x2, int y2);
 
 /*
  * Inicializa alguns parametros do GLUT
@@ -281,6 +293,13 @@ void keyboard(unsigned char key, int x, int y){
         	break;
         case 'F':
         	modo = FLOOD;
+        	break;
+        //Tecla G, para o Preenchimento de Poligonos.
+        case 'g':
+        	modo = PREEN;
+        	break;
+        case 'G':
+        	modo = PREEN;
         	break;
         // Tecla 0, para limpar a tela.
         case '0':
@@ -439,22 +458,22 @@ void transfGeometricas(int key, int x, int y){
     				//----------Translação----------//
     				//Para cima:
     				case GLUT_KEY_UP:
-            			v->y = v->y + 1;
+            			v->y = v->y + 10;
             			glutPostRedisplay();
             			break;
             		//Para baixo:
             		case GLUT_KEY_DOWN:
-            			v->y = v->y - 1;
+            			v->y = v->y - 10;
             			glutPostRedisplay();
             			break;
             		//Para a esquerda:
             		case GLUT_KEY_LEFT:
-            			v->x = v->x - 1;
+            			v->x = v->x - 10;
             			glutPostRedisplay();
             			break;
             		//Para a direita:
             		case GLUT_KEY_RIGHT:
-            			v->x = v->x + 1;
+            			v->x = v->x + 10;
             			glutPostRedisplay();
             			break;
             		//----------Escala----------//
@@ -624,19 +643,199 @@ void drawFormas(){
 				    controlPoligono = 0;
 				    desenha_poligono = false;
 				}
-			break;	
+				break;
+			
+			case PREEN:
+				int j = 0;
+			 	int xpr[2];
+				int ypr[2];
+				initTabela();
+                for (std::forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, j++) {
+				    xpr[j%2] = v->x;
+				    ypr[j%2] = v->y;
+				
+				    std::forward_list<vertice>::iterator proximo = std::next(v);
+				    if (proximo != f->v.end()) {
+				        xpr[(j + 1)%2] = proximo->x;
+				        ypr[(j + 1)%2] = proximo->y;
+				        addTabela(xpr[j%2], ypr[j%2], xpr[(j + 1)%2], ypr[(j + 1)%2]);
+				    }
+    	        }
+				preenchimentoPoligono();
+				glutPostRedisplay();
+				break;			
     	}
 	}
 
 }
 
+//----------------------------------------- PREENCHIMENTO DE POLIGONOS ----------------------------------------------------------//
+void initTabela(){
+	int i = 0;
+	for(i = 0; i < 512; i++){
+		TA[i].quantArestas = 0;
+	}
+	TAA.quantArestas = 0;
+}
+
+void ordenaTabela(tabela *ta){
+	Arestas aux;
+	int i,j;
+	
+	for(i = 1; i < ta -> quantArestas; i++){
+		aux.ymax = ta->arestas[i].ymax;
+		aux.xdeymin = ta->arestas[i].xdeymin;
+		aux.m = ta->arestas[i].m;
+		j = i - 1;
+		
+		while((aux.xdeymin < ta->arestas[j].xdeymin) && (j >= 0)){
+			ta->arestas[j + 1].ymax = ta->arestas[j].ymax;
+			ta->arestas[j + 1].xdeymin = ta->arestas[j].xdeymin;
+			ta->arestas[j + 1].m = ta->arestas[j].m;
+			j = j - 1;	
+		}
+		ta->arestas[j + 1].ymax = aux.ymax;
+		ta->arestas[j + 1].xdeymin = aux.xdeymin;
+		ta->arestas[j + 1].m = aux.m;
+	}
+	
+}
+
+void formarTuplas (tabela *recebe,int ym,int xm,float m){
+	(recebe->arestas[(recebe)->quantArestas]).ymax = ym;
+	(recebe->arestas[(recebe)->quantArestas]).xdeymin = (float)xm;
+	(recebe->arestas[(recebe)->quantArestas]).m = m;
+			
+	ordenaTabela(recebe);
+		
+	(recebe->quantArestas)++;	
+}
+
+void addTabela (int x1,int y1, int x2, int y2){
+	float m,minv;
+	int yMaxTabela,xDeyMinTabela, scanline;
+	
+	if (x2==x1){
+		minv=0.000000;
+	}
+	else{
+		m = ((float)(y2-y1))/((float)(x2-x1));
+		//Arestas horizontais
+		if (y2==y1)
+			return;
+		minv = (float)1.0/m;
+	}
+	
+	if (y1>y2){
+		scanline=y2;
+		yMaxTabela=y1;
+		xDeyMinTabela=x2;
+	}
+	
+	else{
+		scanline=y1;
+		yMaxTabela=y2;
+		xDeyMinTabela=x1;	
+	}
+	formarTuplas(&TA[scanline],yMaxTabela,xDeyMinTabela,minv);	
+}
+
+void remove(tabela *ta, int yy){
+	int i,j;
+	for (i=0; i< ta->quantArestas; i++){
+		if (ta->arestas[i].ymax == yy){		
+			for ( j = i ; j < ta->quantArestas -1 ; j++ ){
+				ta->arestas[j].ymax = ta->arestas[j+1].ymax;
+				ta->arestas[j].xdeymin = ta->arestas[j+1].xdeymin;
+				ta->arestas[j].m = ta->arestas[j+1].m;
+		}
+				ta->quantArestas--;
+			i--;
+		}
+	}
+}
+
+void atualizax(tabela *ta){
+	int i;
+	
+	for (i=0; i<ta->quantArestas; i++){
+		(ta->arestas[i]).xdeymin = (ta->arestas[i]).xdeymin + (ta->arestas[i]).m;
+	}
+}
+
+void preenchimentoPoligono(){
+	int i, j, x1, ymax1, x2, ymax2, FillFlag = 0, coordCount;
+	
+	for (i=0; i<height; i++){
+		for (j=0; j<TA[i].quantArestas; j++){
+			formarTuplas(&TAA, TA[i].arestas[j].ymax, TA[i].arestas[j].xdeymin, TA[i].arestas[j].m);
+		}
+		remove(&TAA, i);
+		ordenaTabela(&TAA);
+		
+		j = 0;
+		FillFlag = 0;
+		coordCount = 0;
+		x1 = 0;
+		x2 = 0;
+		ymax1 = 0;
+		ymax2 = 0;
+		while (j<TAA.quantArestas){
+			if (coordCount%2==0){
+				x1 = (int)(TAA.arestas[j].xdeymin);
+				ymax1 = TAA.arestas[j].ymax;
+				if (x1==x2){
+					if (((x1==ymax1)&&(x2!=ymax2))||((x1!=ymax1)&&(x2==ymax2))){
+						x2 = x1;
+						ymax2 = ymax1;
+					}else{
+						coordCount++;
+					}
+				}else{
+					coordCount++;
+				}
+			}else{
+				x2 = (int)TAA.arestas[j].xdeymin;
+				ymax2 = TAA.arestas[j].ymax;
+			
+				FillFlag = 0;
+				
+				if (x1==x2){
+					if (((x1==ymax1)&&(x2!=ymax2))||((x1!=ymax1)&&(x2==ymax2))){
+						x1 = x2;
+						ymax1 = ymax2;
+					}else{
+						coordCount++;
+						FillFlag = 1;
+					}
+				}else{
+					coordCount++;
+					FillFlag = 1;
+				}
+			
+			
+			if(FillFlag){
+				glBegin(GL_LINES);
+				glColor3f(1.0,1.0,0.0);
+				glVertex2i(x1,i);
+				glVertex2i(x2,i);
+				glEnd();
+				glFlush();		
+			}
+		}			
+		j++;
+	}		
+	atualizax(&TAA);
+	}	
+}
+
 //----------------------------------------- DESENHO DE POLIGONOS ----------------------------------------------------------//
 void poligono(int* x, int* y){
 	pushForma(POL);
+	pushForma(PREEN);
 	for(int i=0; i<lados_poligono; i++){
 		pushVertice(x[i], y[i]);
 		pushVertice(x[(i+1)%lados_poligono], y[(i+1)%lados_poligono]);
-		//pushPoligno(x[i], y[i], x[(i+1)%lados_poligono], y[(i+1)%lados_poligono]);
 	}
 }
 
@@ -807,6 +1006,7 @@ void floodFill(int x, int y, float oldColor[3], float fillColor[3]) {
         floodFill(x, y - 1, oldColor, fillColor);
     }
 }
+
 
 /*
  * Funcao principal
