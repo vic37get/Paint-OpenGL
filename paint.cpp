@@ -1,5 +1,5 @@
 /*
- * Computacao Grafica
+ * Computação Gráfica
  * Codigo: Paint em OpenGL
  * Autor: Victor Ribeiro da Silva
  */
@@ -24,17 +24,15 @@
 
 using namespace std;
 
-// Variaveis Globais
+// DEFINES
 #define ESC 27
 #define maxVer 10000
-//DESENHO DO POLIGONO
+
+//Variáveis para o desenho de polígonos
 bool desenha_poligono = false;
 int *xPoli;
 int *yPoli;
 int lados_poligono = 0;
-
-//Operacoes Geometricas
-int ultima_operacao = 0;
 
 int raio;
 //Enumeracao com os tipos de formas geometricas
@@ -51,7 +49,6 @@ int x_1, y_1, x_2, y_2, x_3, y_3;
 
 //Indica o tipo de forma geometrica ativa para desenhar
 int modo = LIN;
-
 
 //Largura e altura da janela
 int width = 500, height = 500;
@@ -113,7 +110,6 @@ void pushForma(int tipo){
     f.tipo = tipo;
     formas.push_front(f);
 }
-
 
 // Funcao para armazenar um vertice na forma do inicio da lista de formas geometricas
 // Armazena sempre no inicio da lista
@@ -188,11 +184,14 @@ void triangulo(int x1, int y1, int x2, int y2, int x3, int y3);
 //Funcao que implementa a Circunferencia
 void circunferencia(int x1, int x2, int origemX, int origemY, int raio);
 
-//Funcao que implementa a coloração FloodFill
+//Funções que implementam a coloração FloodFill
 void floodFill(int x, int y, float oldColor[3], float fillColor[3]);
-void coloreFlood(int x, int y, float fillColor[3]);
+
+//Função que desenha o polígono.
 void poligono(int* x, int* y);
-void translacao();
+
+//Funções do algoritmo de preenchimento de Polígonos.
+void pushPreenchimento(int* x, int* y);
 void initTabela();
 void preenchimentoPoligono();
 void addTabela (int x1,int y1, int x2, int y2);
@@ -245,7 +244,6 @@ void menu_popup(int value){
     if (value == 0) exit(EXIT_SUCCESS);
     modo = value;
 }
-
 
 /*
  * Controle das teclas comuns do teclado
@@ -305,6 +303,7 @@ void keyboard(unsigned char key, int x, int y){
         case '0':
         	limpaTela();
         	break;
+        //Tecla ESC, para sair da aplicação.
         case ESC: exit(EXIT_SUCCESS); 
 			break;
     }
@@ -411,8 +410,22 @@ void mouse(int button, int state, int x, int y){
 				if (state == GLUT_DOWN){
 					desenha_poligono = true;
 					poligono(xPoli, yPoli);
+					lados_poligono = 0;
+				    desenha_poligono = false;
+					xPoli = (int*)realloc(xPoli, 0 * sizeof(int));
+    	            yPoli = (int*)realloc(yPoli, 0 * sizeof(int));
+    	            free(xPoli);
+    	            free(yPoli);
+    	            glutPostRedisplay();
+					
+				}
+			}
+			else if(modo == PREEN){
+				if(state == GLUT_DOWN){
+					pushPreenchimento(xPoli, yPoli);
 					glutPostRedisplay();
 				}
+				
 			}
 			break;
 	}
@@ -436,6 +449,7 @@ void drawPixel(int x, int y){
     glEnd();  // indica o fim do ponto
 }
 
+//----------------------------------------- TRANSFORMAÇÕES GEOMÉTRICAS ----------------------------------------------------------//
 void transfGeometricas(int key, int x, int y){
 		int i = 0;
 		int y_aux;
@@ -545,7 +559,6 @@ void transfGeometricas(int key, int x, int y){
  */
 void drawFormas(){
 	int i = 0;
-	int controlPoligono = 0;
     //Apos o primeiro clique, desenha a reta com a posicao atual do mouse
 	//Desenha o segmento de reta apos dois cliques
 	if (click1 && (modo == LIN || modo == RET) ){
@@ -607,6 +620,7 @@ void drawFormas(){
                 origemY = (yc[1] + yc[0])/2;
                 circunferencia(xc[0], yc[0], origemX, origemY, raio);
                 break;
+            
 			 case FLOOD:
 			 	i = 0;
 				int xf;
@@ -635,14 +649,16 @@ void drawFormas(){
 				        xp[(i + 1)%2] = proximo->x;
 				        yp[(i + 1)%2] = proximo->y;
 				        linha(xp[i%2], yp[i%2], xp[(i + 1)%2], yp[(i + 1)%2]);
+				        if (modo == PREEN && f==formas.begin()){
+							addTabela(xp[i%2], yp[i%2], xp[(i + 1)%2], yp[(i + 1)%2]);
+						}
 				    }
 				}
-				
-				if (controlPoligono == lados_poligono && desenha_poligono) {
-				    lados_poligono = 0;
-				    controlPoligono = 0;
-				    desenha_poligono = false;
+				if (modo == PREEN && f==formas.begin()){
+					preenchimentoPoligono();
+					
 				}
+				glutPostRedisplay();
 				break;
 			
 			case PREEN:
@@ -650,19 +666,16 @@ void drawFormas(){
 			 	int xpr[2];
 				int ypr[2];
 				initTabela();
-                for (std::forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, j++) {
-				    xpr[j%2] = v->x;
-				    ypr[j%2] = v->y;
-				
-				    std::forward_list<vertice>::iterator proximo = std::next(v);
-				    if (proximo != f->v.end()) {
-				        xpr[(j + 1)%2] = proximo->x;
-				        ypr[(j + 1)%2] = proximo->y;
-				        addTabela(xpr[j%2], ypr[j%2], xpr[(j + 1)%2], ypr[(j + 1)%2]);
-				    }
-    	        }
-				preenchimentoPoligono();
-				glutPostRedisplay();
+				glBegin(GL_LINES);
+					glColor3f(1.0,0.0,0.0);
+                	for (std::forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, j++) {
+				    	xpr[j] = v->x;
+				    	ypr[j] = v->y;	    
+    	        	}
+    				glVertex2i(xpr[0],ypr[0]);
+					glVertex2i(xpr[1],ypr[1]);
+					glEnd();
+				glFlush();
 				break;			
     	}
 	}
@@ -670,6 +683,14 @@ void drawFormas(){
 }
 
 //----------------------------------------- PREENCHIMENTO DE POLIGONOS ----------------------------------------------------------//
+void pushPreenchimento(int* x, int* y){
+	pushForma(PREEN);
+	for(int i=0; i<lados_poligono; i++){
+		pushVertice(x[i], y[i]);
+		pushVertice(x[(i+1)%lados_poligono], y[(i+1)%lados_poligono]);
+	}
+}
+
 void initTabela(){
 	int i = 0;
 	for(i = 0; i < 512; i++){
@@ -815,12 +836,9 @@ void preenchimentoPoligono(){
 			
 			
 			if(FillFlag){
-				glBegin(GL_LINES);
-				glColor3f(1.0,1.0,0.0);
-				glVertex2i(x1,i);
-				glVertex2i(x2,i);
-				glEnd();
-				glFlush();		
+				pushForma(PREEN);
+				pushVertice(x1, i);
+				pushVertice(x2, i);		
 			}
 		}			
 		j++;
@@ -832,7 +850,6 @@ void preenchimentoPoligono(){
 //----------------------------------------- DESENHO DE POLIGONOS ----------------------------------------------------------//
 void poligono(int* x, int* y){
 	pushForma(POL);
-	pushForma(PREEN);
 	for(int i=0; i<lados_poligono; i++){
 		pushVertice(x[i], y[i]);
 		pushVertice(x[(i+1)%lados_poligono], y[(i+1)%lados_poligono]);
@@ -840,8 +857,6 @@ void poligono(int* x, int* y){
 }
 
 //----------------------------------------- DESENHO DE LINHAS ----------------------------------------------------------//
-
-// Função que implementa a linha usando o Algoritmo de Bresenham com redução ao primeiro octante.
 void linha(int x1, int y1, int x2, int y2){
 	int deltaX, deltaY, d, incE, incNE, xi, yi, aux;
 	int pontoX, pontoY, pontoX1, pontoY1, pontoX2, pontoY2;
@@ -979,7 +994,6 @@ void circunferencia(int x1, int y1, int origemX, int origemY, int raio){
 }
 
 //----------------------------------------- FLOOD FILL ----------------------------------------------------------//
-
 void floodFill(int x, int y, float oldColor[3], float fillColor[3]) {
     float pixelColor[3];
     glReadPixels(x, y, 1, 1, GL_RGB, GL_FLOAT, pixelColor);
@@ -1007,7 +1021,6 @@ void floodFill(int x, int y, float oldColor[3], float fillColor[3]) {
     }
 }
 
-
 /*
  * Funcao principal
  */
@@ -1016,7 +1029,7 @@ int main(int argc, char** argv){
     glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB); //Selecao do Modo do Display e do Sistema de cor
     glutInitWindowSize (width, height);  // Tamanho da janela do OpenGL
     glutInitWindowPosition (100, 100); //Posicao inicial da janela do OpenGL
-    glutCreateWindow ("Computacao Grafica: Paint com OpenGL"); // Da nome para uma janela OpenGL
+    glutCreateWindow ("Computação Gráfica: Paint com OpenGL"); // Da nome para uma janela OpenGL
     init(); // Chama funcao init();
     glutReshapeFunc(reshape); //funcao callback para redesenhar a tela
     glutKeyboardFunc(keyboard); //funcao callback do teclado
@@ -1024,8 +1037,6 @@ int main(int argc, char** argv){
     glutMouseFunc(mouse); //funcao callback do mouse
     glutPassiveMotionFunc(mousePassiveMotion); //fucao callback do movimento passivo do mouse
     glutDisplayFunc(display); //funcao callback de desenho
-
-    
     glutMainLoop(); // executa o loop do OpenGL
     return EXIT_SUCCESS; // retorna 0 para o tipo inteiro da funcao main();
 }
