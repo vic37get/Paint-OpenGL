@@ -57,19 +57,22 @@ int width = 500, height = 500;
 float novaCor[3] = {1.0, 1.0, 0.0};
 float corAntiga[3] = {1.0, 1.0, 1.0};
 
+//Estrutura para criar arestas para o algoritmo de preenchimento.
 typedef struct{
-	int ymax; //y máximo da aresta
-	float xdeymin; //x do y mínimo da aresta
-	float m;
+	int ymax; //y máximo da aresta.
+	float xdeymin; //x do y mínimo da aresta.
+	float m; //m, que é deltaX/deltaY.
 }Arestas;
 
 typedef struct{
 	int quantArestas; //quantidade de arestas
-	Arestas arestas[maxVer];
+	Arestas arestas[maxVer]; // 
 }tabela;
 
+//Tabela de arestas ativas do Algoritmo de Preenchimento.
 tabela TA[512], TAA;
 
+//Estrutura para armazenar os pontos da aresta do Algoritmo de Preenchimento.
 struct ponto {
     int x1;
     int y1;
@@ -77,16 +80,8 @@ struct ponto {
     int y2;
 };
 
+//Lista de pontos.
 forward_list<ponto> pontos;
-
-void pushPonto(int x1, int y1, int x2, int y2) {
-    ponto ponto;
-    ponto.x1 = x1;
-    ponto.y1 = y1;
-    ponto.x2 = x2;
-    ponto.y2 = y2;
-    pontos.push_front(ponto);
-}
 
 // Definicao de vertice
 struct vertice{
@@ -104,7 +99,6 @@ struct forma{
 forward_list<forma> formas;
 
 // Funcao para armazenar uma forma geometrica na lista de formas
-// Armazena sempre no inicio da lista
 void pushForma(int tipo){
     forma f;
     f.tipo = tipo;
@@ -112,7 +106,6 @@ void pushForma(int tipo){
 }
 
 // Funcao para armazenar um vertice na forma do inicio da lista de formas geometricas
-// Armazena sempre no inicio da lista
 void pushVertice(int x, int y){
     vertice v;
     v.x = x;
@@ -120,6 +113,7 @@ void pushVertice(int x, int y){
     formas.front().v.push_front(v);
 }
 
+//Função para limpar a tela, apagando tudo o que foi desenhado.
 void limpaTela(){
 	while(!formas.empty()){
 		formas.pop_front();	
@@ -127,13 +121,16 @@ void limpaTela(){
 	glutPostRedisplay();
 }
 
-//Fucao para armazenar uma Linha na lista de formas geometricas
+//-------------------- Funções para armazenamento de formas na pilha --------------------//
+
+//Função para armazenar uma Linha na lista de formas geometricas
 void pushLinha(int x1, int y1, int x2, int y2){
     pushForma(LIN);
     pushVertice(x1, y1);
     pushVertice(x2, y2);
 }
 
+//Função para armazenamento de um triângulo na lista de formas.
 void pushTriangulo(int x1, int y1, int x2, int y2, int x3, int y3){
 	pushForma(TRI);
 	pushVertice(x1, y1);
@@ -141,26 +138,30 @@ void pushTriangulo(int x1, int y1, int x2, int y2, int x3, int y3){
 	pushVertice(x3, y3);	
 }
 
+//Função para armazenamento de quadriláteros na lista de formas.
 void pushQuadrilatero(int x1, int y1, int x2, int y2){
 	pushForma(RET);
 	pushVertice(x1,y1);
 	pushVertice(x2,y2);
 }
 
+//Função para armazenamento de circunferências na lista de formas.
 void pushCircunferencia(int x1, int y1, int x2, int y2, int origemX, int origemY){
 	pushForma(CIR);
 	pushVertice(x1, y1);
 	pushVertice(x2, y2);
 }
 
+//Função para armazenamento dos pontos do algoritmo FloodFill.
 void pushFloodFill(int x1, int y1){
 	pushForma(FLOOD);
 	pushVertice(x1,y1);
 }
 
-/*
- * Declaracoes antecipadas (forward) das funcoes (assinaturas das funcoes)
- */
+//---------------------------------------------------------------------------------------//
+
+
+//-------Declaracoes antecipadas (forward) das funcoes (assinaturas das funcoes)--------//
 void init(void);
 void reshape(int w, int h);
 void display(void);
@@ -169,6 +170,7 @@ void keyboard(unsigned char key, int x, int y);
 void mouse(int button, int state, int x, int y);
 void mousePassiveMotion(int x, int y);
 void drawPixel(int x, int y);
+
 // Funcao que percorre a lista de formas geometricas, desenhando-as na tela
 void drawFormas();
 
@@ -196,38 +198,30 @@ void initTabela();
 void preenchimentoPoligono();
 void addTabela (int x1,int y1, int x2, int y2);
 
-/*
- * Inicializa alguns parametros do GLUT
- */
+//---------------------------------------------------------------------------------------//
+
+
+//Inicializa alguns parametros do GLUT
 void init(void){
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f); //Limpa a tela com a cor branca;
 }
 
-/*
- * Ajusta a projecao para o redesenho da janela
- */
-void reshape(int w, int h)
-{
-	// Muda para o modo de projecao e reinicializa o sistema de coordenadas
+//Ajusta a projecao para o redesenho da janela
+void reshape(int w, int h){
+	//Muda para o modo de projecao e reinicializa o sistema de coordenadas
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-
-	// Definindo o Viewport para o tamanho da janela
+	//Definindo o Viewport para o tamanho da janela
 	glViewport(0, 0, w, h);
-	
 	width = w;
 	height = h;
     glOrtho (0, w, 0, h, -1 ,1);  
-
-   // muda para o modo de desenho
+    //Muda para o modo de desenho
 	glMatrixMode(GL_MODELVIEW);
  	glLoadIdentity();
-
 }
 
-/*
- * Controla os desenhos na tela
- */
+//Controla os desenhos na tela
 void display(void){
     glClear(GL_COLOR_BUFFER_BIT); //Limpa o buffer de cores e reinicia a matriz
     glColor3f (0.0, 0.0, 0.0); // Seleciona a cor default como preto
@@ -237,17 +231,9 @@ void display(void){
     glutSwapBuffers(); // manda o OpenGl renderizar as primitivas
 }
 
-/*
- * Controla o menu pop-up
- */
-void menu_popup(int value){
-    if (value == 0) exit(EXIT_SUCCESS);
-    modo = value;
-}
+//---------------------- Controle de teclas e mouse -------------------------//
 
-/*
- * Controle das teclas comuns do teclado
- */
+//Controle de teclas 
 void keyboard(unsigned char key, int x, int y){
     switch (key) { // key - variavel que possui valor ASCII da tecla precionada
     	//Tecla L, desenha Linhas.
@@ -309,9 +295,7 @@ void keyboard(unsigned char key, int x, int y){
     }
 }
 
-/*
- * Controle dos botoes do mouse
- */
+//Controle dos botoes do mouse
 void mouse(int button, int state, int x, int y){
     switch (button) {
         case GLUT_LEFT_BUTTON:
@@ -431,25 +415,25 @@ void mouse(int button, int state, int x, int y){
 	}
 }
 
-/*
- * Controle da posicao do cursor do mouse
- */
+//Controle da posicao do cursor do mouse.
 void mousePassiveMotion(int x, int y){
     m_x = x; m_y = height - y - 1;
     glutPostRedisplay();
 }
 
-/*
- * Funcao para desenhar apenas um pixel na tela
- */
+//---------------------------------------------------------------------------------------//
+
+
+//Funcao para desenhar apenas um pixel na tela.
 void drawPixel(int x, int y){
     glBegin(GL_POINTS); // Seleciona a primitiva GL_POINTS para desenhar
     	glColor3f(0.0, 0.0, 0.0);
         glVertex2i(x, y);
-    glEnd();  // indica o fim do ponto
+    glEnd(); // indica o fim do ponto
 }
 
-//----------------------------------------- TRANSFORMAÇÕES GEOMÉTRICAS ----------------------------------------------------------//
+//------------------------- TRANSFORMAÇÕES GEOMÉTRICAS ----------------------------------//
+
 void transfGeometricas(int key, int x, int y){
 		int i = 0;
 		int y_aux;
@@ -554,14 +538,16 @@ void transfGeometricas(int key, int x, int y){
         
 }
 
-/*
- *Funcao que desenha a lista de formas geometricas
- */
+//---------------------------------------------------------------------------------------//
+
+
+//------------------------ Desenho de Formas Geométricas --------------------------------//
+
 void drawFormas(){
 	int i = 0;
     //Apos o primeiro clique, desenha a reta com a posicao atual do mouse
 	//Desenha o segmento de reta apos dois cliques
-	if (click1 && (modo == LIN || modo == RET) ){
+	if (click1 && (modo == LIN || modo == RET || modo == CIR || modo == POL) ){
 	   	linha(x_1, y_1, m_x, m_y);
 	}
     //Percorre a lista de formas geometricas para desenhar
@@ -621,7 +607,8 @@ void drawFormas(){
                 circunferencia(xc[0], yc[0], origemX, origemY, raio);
                 break;
             
-			 case FLOOD:
+            //Feito pegando os pontos a serem pintados.
+			case FLOOD:
 			 	i = 0;
 				int xf;
 				int yf;
@@ -636,6 +623,7 @@ void drawFormas(){
 				glFlush();		
 				break;
 			
+			//Feito pegando cada vertice e rasterizando o poligono.
 			case POL:
 			 	i = 0;
 			 	int xp[2];
@@ -661,6 +649,7 @@ void drawFormas(){
 				glutPostRedisplay();
 				break;
 			
+			//Feito pegando todas as linhas horizontais para o polígono.
 			case PREEN:
 				int j = 0;
 			 	int xpr[2];
@@ -682,7 +671,11 @@ void drawFormas(){
 
 }
 
-//----------------------------------------- PREENCHIMENTO DE POLIGONOS ----------------------------------------------------------//
+//---------------------------------------------------------------------------------------//
+
+
+//-------------------------- PREENCHIMENTO DE POLIGONOS --------------------------------//
+
 void pushPreenchimento(int* x, int* y){
 	pushForma(PREEN);
 	for(int i=0; i<lados_poligono; i++){
@@ -847,7 +840,11 @@ void preenchimentoPoligono(){
 	}	
 }
 
-//----------------------------------------- DESENHO DE POLIGONOS ----------------------------------------------------------//
+//---------------------------------------------------------------------------------------//
+
+
+//-------------------------------- DESENHO DE POLIGONOS ---------------------------------//
+
 void poligono(int* x, int* y){
 	pushForma(POL);
 	for(int i=0; i<lados_poligono; i++){
@@ -856,7 +853,11 @@ void poligono(int* x, int* y){
 	}
 }
 
-//----------------------------------------- DESENHO DE LINHAS ----------------------------------------------------------//
+//---------------------------------------------------------------------------------------//
+
+
+//---------------------------------- DESENHO DE LINHAS ---------------------------------//
+
 void linha(int x1, int y1, int x2, int y2){
 	int deltaX, deltaY, d, incE, incNE, xi, yi, aux;
 	int pontoX, pontoY, pontoX1, pontoY1, pontoX2, pontoY2;
@@ -934,8 +935,12 @@ void linha(int x1, int y1, int x2, int y2){
 	}
 	drawPixel(pontoX2, pontoY2);
 }
+
+//---------------------------------------------------------------------------------------//
+
 	
-//----------------------------------------- DESENHO DE QUADRILATEROS ----------------------------------------------------------//
+//--------------------------- DESENHO DE QUADRILATEROS ----------------------------------//
+
 void quadrilatero(int x1, int y1, int x2, int y2){
 	linha(x1, y1, x2,y1);
 	linha(x2, y1, x2, y2);
@@ -943,14 +948,22 @@ void quadrilatero(int x1, int y1, int x2, int y2){
 	linha(x1, y2, x1, y1);
 }
 
-//----------------------------------------- DESENHO DE TRIÂNGULOS ----------------------------------------------------------//
+//---------------------------------------------------------------------------------------//
+
+
+//---------------------------- DESENHO DE TRIÂNGULOS ------------------------------------//
+
 void triangulo(int x1,int y1, int x2, int y2, int x3, int y3){
 	linha(x1, y1, x2, y2);
 	linha(x2, y2, x3, y3);
 	linha(x3, y3, x1, y1);
 }
 
-//----------------------------------------- DESENHO DE CIRCUNFERÊNCIA ----------------------------------------------------------//
+//---------------------------------------------------------------------------------------//
+
+
+//---------------------------- DESENHO DE CIRCUNFERÊNCIA --------------------------------//
+
 void espelhamento(int x1, int y1, int origemX, int origemY){
 	//Primeiro quadrante.
 	drawPixel(x1+origemX, y1+origemY);
@@ -993,7 +1006,11 @@ void circunferencia(int x1, int y1, int origemX, int origemY, int raio){
 
 }
 
-//----------------------------------------- FLOOD FILL ----------------------------------------------------------//
+//---------------------------------------------------------------------------------------//
+
+
+//------------------------------------ FLOOD FILL ---------------------------------------//
+
 void floodFill(int x, int y, float oldColor[3], float fillColor[3]) {
     float pixelColor[3];
     glReadPixels(x, y, 1, 1, GL_RGB, GL_FLOAT, pixelColor);
@@ -1021,9 +1038,10 @@ void floodFill(int x, int y, float oldColor[3], float fillColor[3]) {
     }
 }
 
-/*
- * Funcao principal
- */
+//---------------------------------------------------------------------------------------//
+
+
+//----------------------------------- FUNÇÃO MAIN --------------------------------------//
 int main(int argc, char** argv){
     glutInit(&argc, argv); // Passagens de parametro C para o glut
     glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB); //Selecao do Modo do Display e do Sistema de cor
@@ -1040,3 +1058,5 @@ int main(int argc, char** argv){
     glutMainLoop(); // executa o loop do OpenGL
     return EXIT_SUCCESS; // retorna 0 para o tipo inteiro da funcao main();
 }
+
+//---------------------------------------------------------------------------------------//
