@@ -64,7 +64,8 @@ Para limpar a tela, ou seja, apagar todos os desenhos feitos anteriormente, bast
 
 ### 8. Preenchimento de Polígonos 🔳
 - A funcionalidade de preenchimento de polígonos é selecionada ao acionar a tecla `g` ou `G`.
+- O último poligono rasterizado é preenchido com a cor `vermelha`.
 
 ### 9. Preenchimento Flood Fill 🖌
 - A funcionalidade de preenchimento usando o algorítmo Flood Fill é selecionada ao acionar a tecla `f` ou `F`.
-- A forma geométrica rasterizada é preenchida ao clicar com o `botão esquerdo do mouse` sobre ela.
+- A forma geométrica rasterizada é preenchida com a cor `amarela` ao clicar com o `botão esquerdo do mouse` sobre ela.
